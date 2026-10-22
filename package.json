@@ -1,0 +1,18 @@
+{
+  "name": "kog-fee-verifier",
+  "version": "0.1.0",
+  "description": "Pure verifier for a Kognai KOG fee paid over x402 in an SPL Token 2022 mint on Solana. No RPC inside.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "license": "MIT",
+  "dependencies": {}
+}
