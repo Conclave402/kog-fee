@@ -32,23 +32,29 @@ const { ok, reason } = verifyKogFee({ tx, quote, payee, mint, seen });
 | fee | the net credit of `mint` to `payee` in this tx is below the quote |
 | mint | the credited token balance is not the expected mint |
 | payee | the credited account owner is not the expected payee |
-| expiry | `tx.blockTime` is after `quote.expiresAt`, or block time is missing |
+| expiry | `quote.expiresAt` is missing, `tx.blockTime` is missing, or block time is after `quote.expiresAt` |
 | replay | the first signature was already seen in `seen` |
 | failed tx | `tx.meta.err` is set |
 
 The fee is measured as a **delta** (post minus pre), not a raw balance, and with
 `BigInt` only, so a payee who already held the token is not treated as having
-paid again.
+paid again. The owner comes from the balance entry; a balance without `owner`
+is not counted (real `getTransaction` always fills it).
 
 ## Tests
 
 ```sh
-node --test test/*.test.js      # 13 tests, offline, no network
+node --test test/*.test.js      # 15 tests, offline, no network
 ```
 
-Tests are named after the acceptance lines (right fee, short fee, wrong mint,
-wrong payee, expired quote, replay) plus replay-delta and failed-tx cases. Each
+Tasks. Tests are named after the acceptance lines (right fee, short fee, wrong
+mint, wrong payee, expired quote, replay) plus replay-delta, failed-tx, a
+missing-expiry case (A10) and a recorded real KOG transaction replay (A11). Each
 acceptance case fails against a verifier missing that check (mutation-checked).
+
+`fixtures/kog_transfer_recorded.json` is a real KOG Token 2022 transfer captured
+from Solana mainnet with `getTransaction` (jsonParsed); its provenance is in the
+file. A11 replays it offline.
 
 ## House rules
 

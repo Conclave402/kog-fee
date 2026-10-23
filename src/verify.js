@@ -58,26 +58,19 @@ function normBalance(entry) {
   return { accountIndex, mint, owner, amount };
 }
 
-function ownerAt(tx, accountIndex) {
-  const keys = tx && tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys;
-  if (!Array.isArray(keys)) return undefined;
-  const k = keys[accountIndex];
-  if (k && typeof k === 'object') return k.pubkey ?? k.accountKey;
-  return k;
-}
-
 // Net amount of `mint` that arrived at `payee` during this transaction.
+//
+// The owner must come from the balance entry (real getTransaction fills it). We
+// do NOT fall back to the account key, because that is the token account, not
+// the wallet, and would confuse a token account for a payee.
 function credited(tx, mint, payee) {
   const meta = (tx && tx.meta) || {};
   const pre = (meta.preTokenBalances || []).map(normBalance).filter(Boolean);
   const post = (meta.postTokenBalances || []).map(normBalance).filter(Boolean);
-  const indexFor = new Map();
-  for (const b of post) indexFor.set(b.accountIndex, b);
   let total = 0n;
   for (const b of post) {
     if (b.mint !== mint) continue;
-    const owner = b.owner ?? ownerAt(tx, b.accountIndex);
-    if (owner !== payee) continue;
+    if (b.owner !== payee) continue;
     const before = pre.find((p) => p.accountIndex === b.accountIndex);
     const delta = b.amount - (before ? before.amount : 0n);
     if (delta > 0n) total += delta;
@@ -97,13 +90,13 @@ export function verifyKogFee({ tx, quote, payee, mint, seen } = {}) {
   // A failed transaction never settles a payment.
   if (tx.meta && tx.meta.err) return { ok: false, reason: 'transaction failed' };
 
-  // Expiry: quote.expiresAt is a unix timestamp; tx.blockTime must be <= it.
-  if (quote.expiresAt != null) {
-    const blockTime = tx.blockTime;
-    if (blockTime == null) return { ok: false, reason: 'missing block time' };
-    const exp = toBigInt(quote.expiresAt, 'expiresAt');
-    if (BigInt(blockTime) > exp) return { ok: false, reason: 'quote expired' };
-  }
+  // Expiry is mandatory: a quote with no expiry cannot be bounded, so stripping
+  // the field must not bypass the check. tx.blockTime must be <= expiresAt.
+  if (quote.expiresAt == null) return { ok: false, reason: 'missing quote expiry' };
+  const blockTime = tx.blockTime;
+  if (blockTime == null) return { ok: false, reason: 'missing block time' };
+  const exp = toBigInt(quote.expiresAt, 'expiresAt');
+  if (BigInt(blockTime) > exp) return { ok: false, reason: 'quote expired' };
 
   // Replay protection by transaction signature (first signature).
   const sigs = tx.transaction && tx.transaction.message

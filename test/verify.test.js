@@ -66,6 +66,16 @@ test('A5b missing block time cannot prove a live quote and is refused', () => {
   assert.equal(r.ok, false);
 });
 
+test('A10 a quote with no expiry is refused, so stripping the field cannot bypass expiry', () => {
+  const q = quote({ amount: '1000' });
+  delete q.expiresAt;
+  const tx = txPaying({ amount: '1000' });
+  delete tx.blockTime;
+  const r = verifyKogFee({ tx, quote: q });
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /missing quote expiry/);
+});
+
 test('A6 replay is refused on the second call', () => {
   const seen = new Set();
   const tx = txPaying({ amount: '1000' });
@@ -112,4 +122,25 @@ test('A9 evidence is only consumed on success, so a refusal keeps the signature 
   assert.equal(short.ok, false);
   const ok = verifyKogFee({ tx: txPaying({ amount: '1000', signature: 'SigX' }), quote: q, seen });
   assert.equal(ok.ok, true, ok.reason);
+});
+
+test('A11 a recorded real KOG Token 2022 transaction replays offline', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const raw = JSON.parse(await readFile(new URL('../fixtures/kog_transfer_recorded.json', import.meta.url), 'utf8'));
+  const tx = raw.fixture;
+  const MINT = '76fFhcA142kf9gdg11ahYTmEiZnPXokxJkcF1axupump';
+  const PAYEE = 'C4E4jTqFXTsCYD2UvRTXmSDDjrMuLZtwrnxNJo9XYUJr';
+  const amount = '6350411052973';
+
+  const seen = new Set();
+  const good = verifyKogFee({ tx, quote: { mint: MINT, payee: PAYEE, amount, expiresAt: tx.blockTime + 60 }, seen });
+  assert.equal(good.ok, true, good.reason);
+
+  // the sender did not receive anything, so it is not the payee
+  const sender = verifyKogFee({ tx, quote: { mint: MINT, payee: '8PUKPwqkowfPxB49z73bd6ev9YDN24fKVSVQP2WXwvhg', amount, expiresAt: tx.blockTime + 60 } });
+  assert.equal(sender.ok, false);
+
+  // over the recorded amount is short
+  const over = verifyKogFee({ tx, quote: { mint: MINT, payee: PAYEE, amount: '6350411052974', expiresAt: tx.blockTime + 60 } });
+  assert.equal(over.ok, false);
 });
