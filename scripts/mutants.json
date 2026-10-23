@@ -1,0 +1,98 @@
+[
+  {
+    "id": "skip-failed-tx",
+    "why": "a failed transaction could settle a fee",
+    "file": "src/verify.js",
+    "find": "if (tx.meta && tx.meta.err) return { ok: false, reason: 'transaction failed' };",
+    "replace": "if (false) return { ok: false, reason: 'transaction failed' };",
+    "caught_by": "A7"
+  },
+  {
+    "id": "skip-missing-expiry",
+    "why": "stripping expiresAt would bypass the expiry bound",
+    "file": "src/verify.js",
+    "find": "if (quote.expiresAt == null) return { ok: false, reason: 'missing quote expiry' };",
+    "replace": "if (false) return { ok: false, reason: 'missing quote expiry' };",
+    "caught_by": "A10"
+  },
+  {
+    "id": "skip-missing-blocktime",
+    "why": "a quote with no block time cannot prove it is live",
+    "file": "src/verify.js",
+    "find": "if (blockTime == null) return { ok: false, reason: 'missing block time' };",
+    "replace": "if (false) return { ok: false, reason: 'missing block time' };",
+    "caught_by": "A5b"
+  },
+  {
+    "id": "invert-expiry",
+    "why": "expired quotes would pass and live ones would fail",
+    "file": "src/verify.js",
+    "find": "if (BigInt(blockTime) > exp) return { ok: false, reason: 'quote expired' };",
+    "replace": "if (BigInt(blockTime) < exp) return { ok: false, reason: 'quote expired' };",
+    "caught_by": "A1, A5"
+  },
+  {
+    "id": "skip-replay-check",
+    "why": "the same signature could pay twice",
+    "file": "src/verify.js",
+    "find": "if (seen && signature != null && typeof seen.has === 'function' && seen.has(signature)) {",
+    "replace": "if (false && seen && signature != null && typeof seen.has === 'function' && seen.has(signature)) {",
+    "caught_by": "A6"
+  },
+  {
+    "id": "skip-seen-add",
+    "why": "a paid signature would never be recorded, so replay is open across calls",
+    "file": "src/verify.js",
+    "find": "if (seen && signature != null && typeof seen.add === 'function') seen.add(signature);",
+    "replace": "if (false) seen.add(signature);",
+    "caught_by": "A6"
+  },
+  {
+    "id": "short-fee-equal-refused",
+    "why": "an exact fee would be refused (boundary off by one)",
+    "file": "src/verify.js",
+    "find": "if (paid < required) {",
+    "replace": "if (paid <= required) {",
+    "caught_by": "A1"
+  },
+  {
+    "id": "half-fee-accepted",
+    "why": "half the quoted fee would be accepted",
+    "file": "src/verify.js",
+    "find": "if (paid < required) {",
+    "replace": "if (paid < required / 2n) {",
+    "caught_by": "A2"
+  },
+  {
+    "id": "balance-not-delta",
+    "why": "a pre-existing balance would count as this transaction's payment",
+    "file": "src/verify.js",
+    "find": "const delta = b.amount - (before ? before.amount : 0n);",
+    "replace": "const delta = b.amount;",
+    "caught_by": "A8"
+  },
+  {
+    "id": "ignore-owner",
+    "why": "a payment to another wallet would count as paid to the payee",
+    "file": "src/verify.js",
+    "find": "if (b.owner !== payee) continue;",
+    "replace": "if (false) continue;",
+    "caught_by": "A4"
+  },
+  {
+    "id": "ignore-mint",
+    "why": "a transfer of another token would count as the fee",
+    "file": "src/verify.js",
+    "find": "if (b.mint !== mint) continue;",
+    "replace": "if (false) continue;",
+    "caught_by": "A3"
+  },
+  {
+    "id": "caller-mint-ignored",
+    "why": "an explicit mint argument would be overridden by the quote",
+    "file": "src/verify.js",
+    "find": "const expectMint = mint ?? quote.mint;",
+    "replace": "const expectMint = quote.mint ?? mint;",
+    "caught_by": "A3b"
+  }
+]

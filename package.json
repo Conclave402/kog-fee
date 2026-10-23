@@ -11,7 +11,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "mutants": "node scripts/mutants.mjs"
   },
   "license": "MIT",
   "dependencies": {}

@@ -49,12 +49,28 @@ node --test test/*.test.js      # 15 tests, offline, no network
 
 Tasks. Tests are named after the acceptance lines (right fee, short fee, wrong
 mint, wrong payee, expired quote, replay) plus replay-delta, failed-tx, a
-missing-expiry case (A10) and a recorded real KOG transaction replay (A11). Each
-acceptance case fails against a verifier missing that check (mutation-checked).
+missing-expiry case (A10) and a recorded real KOG transaction replay (A11).
 
 `fixtures/kog_transfer_recorded.json` is a real KOG Token 2022 transfer captured
 from Solana mainnet with `getTransaction` (jsonParsed); its provenance is in the
 file. A11 replays it offline.
+
+## Planted-bug check
+
+Kognai's reviewer plants a bug and expects the tests to catch it, so the suite
+does the same to itself:
+
+```sh
+node scripts/mutants.mjs     # 12 planted bugs, 12 caught, 0 survived, about 4 seconds
+```
+
+For each entry in `scripts/mutants.json` it copies the repo to a temporary
+folder, applies **one** bug with a single exact string replacement (a removed
+check, an inverted comparison, a boundary off by one, a balance read where a
+delta is required, an ignored mint, payee or caller argument), runs the suite
+there, and requires it to fail. The process fails if any mutant survives or if
+the unmutated baseline does not pass first, so a green run is evidence, not a
+claim. Offline, zero dependencies, nothing outside the OS temp folder is used.
 
 ## House rules
 
